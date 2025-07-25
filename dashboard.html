@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bhojan Valley - Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #edf2f7, #e2e8f0);
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        .dashboard-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+        }
+        .order-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        @media (max-width: 640px) {
+            .dashboard-card, .order-card {
+                padding: 1rem;
+            }
+            .items-list, .input-field {
+                font-size: 0.875rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="bg-green-600 text-white p-4 rounded-lg mb-6">
+        <h2 class="text-2xl font-bold">Bhojan Valley Admin Panel</h2>
+    </header>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Analytics Section -->
+        <div class="dashboard-card col-span-1 md:col-span-1">
+            <h3 class="text-lg font-semibold text-green-700 mb-4">Analytics</h3>
+            <p>Total Orders: <span id="orderCount">0</span></p>
+            <p>Total Revenue: ₹<span id="totalRevenue">0</span></p>
+        </div>
+        <!-- Menu Management -->
+        <div class="dashboard-card col-span-1 md:col-span-2">
+            <h3 class="text-lg font-semibold text-green-700 mb-4">Menu Management</h3>
+            <div class="space-y-4">
+                <div>
+                    <input type="text" id="itemName" placeholder="Item Name" class="input-field block w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500" required>
+                    <input type="number" id="newPrice" placeholder="New Price (₹)" class="input-field block w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 mt-2" required>
+                    <button onclick="updatePrice()" class="w-full bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 mt-2">Update Price</button>
+                    <p id="priceUpdateMessage" class="text-sm text-green-600 hidden mt-2">Price updated!</p>
+                    <p id="priceErrorMessage" class="text-sm text-red-500 hidden mt-2">Item not found or invalid price.</p>
+                </div>
+                <div>
+                    <input type="text" id="newItemName" placeholder="New Item Name" class="input-field block w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500" required>
+                    <input type="number" id="newItemPrice" placeholder="Price (₹)" class="input-field block w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 mt-2" required>
+                    <select id="itemCategory" class="input-field block w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 mt-2">
+                        <option value="veg">Veg</option>
+                        <option value="nonveg">Non-Veg</option>
+                        <option value="fastfood">Fast Food</option>
+                    </select>
+                    <button onclick="addMenuItem()" class="w-full bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 mt-2">Add Item</button>
+                    <p id="addItemMessage" class="text-sm text-green-600 hidden mt-2">Item added!</p>
+                    <p id="addItemError" class="text-sm text-red-500 hidden mt-2">Item exists or invalid input.</p>
+                </div>
+            </div>
+        </div>
+        <!-- Orders Section -->
+        <div class="dashboard-card col-span-1 md:col-span-3">
+            <h3 class="text-lg font-semibold text-green-700 mb-4">Orders</h3>
+            <div id="ordersContainer" class="space-y-4 max-h-96 overflow-y-auto">
+                <p class="text-center text-gray-500" id="noOrders">No orders available.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample menu data (update via localStorage or server in production)
+        let menu = {
+            'paneer-butter-masala': 250,
+            'chicken-biryani': 300,
+            'veg-burger': 150
+        };
+
+        async function fetchOrders() {
+            try {
+                const response = await fetch('orders.json');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                const orders = await response.json();
+                const ordersContainer = document.getElementById('ordersContainer');
+                const noOrders = document.getElementById('noOrders');
+                const orderCount = document.getElementById('orderCount');
+                let totalRevenue = 0;
+
+                if (orders.length === 0) {
+                    noOrders.classList.remove('hidden');
+                    orderCount.textContent = '0';
+                    document.getElementById('totalRevenue').textContent = '0';
+                    return;
+                }
+
+                noOrders.classList.add('hidden');
+                orderCount.textContent = orders.length;
+                ordersContainer.innerHTML = '';
+                orders.forEach(order => {
+                    totalRevenue += order.total;
+                    const orderCard = document.createElement('div');
+                    orderCard.className = 'order-card';
+                    orderCard.innerHTML = `
+                        <p><strong>ID:</strong> ${order.id}</p>
+                        <p><strong>Time:</strong> ${order.timestamp}</p>
+                        <p><strong>Items:</strong> ${order.items.map(item => item.name).join(', ')}</p>
+                        <p><strong>Total:</strong> ₹${order.total}</p>
+                        <p><strong>Status:</strong> ${order.status}</p>
+                        <select onchange="updateStatus(${order.id}, this.value)" class="mt-2 p-1 border border-gray-300 rounded">
+                            <option value="Pending" ${order.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                            <option value="Completed" ${order.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                            <option value="Cancelled" ${order.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+                        </select>
+                    `;
+                    ordersContainer.appendChild(orderCard);
+                });
+                document.getElementById('totalRevenue').textContent = totalRevenue.toFixed(2);
+            } catch (error) {
+                console.error('Error fetching orders:', error.message);
+                // Fallback to inline sample data if fetch fails
+                const fallbackOrders = [
+                    {
+                        "id": 1626724680000,
+                        "timestamp": "July 19, 2025, 11:38 PM IST",
+                        "items": [{"name": "Paneer Butter Masala", "quantity": 1, "price": 250, "total": 250}],
+                        "total": 250,
+                        "status": "Pending"
+                    }
+                ];
+                displayOrders(fallbackOrders);
+            }
+        }
+
+        function displayOrders(orders) {
+            const ordersContainer = document.getElementById('ordersContainer');
+            const noOrders = document.getElementById('noOrders');
+            const orderCount = document.getElementById('orderCount');
+            let totalRevenue = 0;
+
+            if (orders.length === 0) {
+                noOrders.classList.remove('hidden');
+                orderCount.textContent = '0';
+                document.getElementById('totalRevenue').textContent = '0';
+                return;
+            }
+
+            noOrders.classList.add('hidden');
+            orderCount.textContent = orders.length;
+            ordersContainer.innerHTML = '';
+            orders.forEach(order => {
+                totalRevenue += order.total;
+                const orderCard = document.createElement('div');
+                orderCard.className = 'order-card';
+                orderCard.innerHTML = `
+                    <p><strong>ID:</strong> ${order.id}</p>
+                    <p><strong>Time:</strong> ${order.timestamp}</p>
+                    <p><strong>Items:</strong> ${order.items.map(item => item.name).join(', ')}</p>
+                    <p><strong>Total:</strong> ₹${order.total}</p>
+                    <p><strong>Status:</strong> ${order.status}</p>
+                    <select onchange="updateStatus(${order.id}, this.value)" class="mt-2 p-1 border border-gray-300 rounded">
+                        <option value="Pending" ${order.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                        <option value="Completed" ${order.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                        <option value="Cancelled" ${order.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
+                    </select>
+                `;
+                ordersContainer.appendChild(orderCard);
+            });
+            document.getElementById('totalRevenue').textContent = totalRevenue.toFixed(2);
+        }
+
+        function updateStatus(orderId, newStatus) {
+            console.log(`Order ${orderId} updated to ${newStatus}`);
+            // In production, update this in a database or orders.json
+        }
+
+        function updatePrice() {
+            const itemName = document.getElementById('itemName').value.toLowerCase().replace(/\s+/g, '-');
+            const newPrice = parseInt(document.getElementById('newPrice').value);
+            const priceUpdateMessage = document.getElementById('priceUpdateMessage');
+            const priceErrorMessage = document.getElementById('priceErrorMessage');
+
+            if (menu[itemName] && newPrice > 0) {
+                menu[itemName] = newPrice;
+                priceUpdateMessage.classList.remove('hidden');
+                priceErrorMessage.classList.add('hidden');
+                setTimeout(() => priceUpdateMessage.classList.add('hidden'), 2000);
+            } else {
+                priceErrorMessage.classList.remove('hidden');
+                priceUpdateMessage.classList.add('hidden');
+                setTimeout(() => priceErrorMessage.classList.add('hidden'), 2000);
+            }
+        }
+
+        function addMenuItem() {
+            const newItemName = document.getElementById('newItemName').value.toLowerCase().replace(/\s+/g, '-');
+            const newItemPrice = parseInt(document.getElementById('newItemPrice').value);
+            const addItemMessage = document.getElementById('addItemMessage');
+            const addItemError = document.getElementById('addItemError');
+
+            if (!menu[newItemName] && newItemPrice > 0) {
+                menu[newItemName] = newItemPrice;
+                addItemMessage.classList.remove('hidden');
+                addItemError.classList.add('hidden');
+                setTimeout(() => addItemMessage.classList.add('hidden'), 2000);
+            } else {
+                addItemError.classList.remove('hidden');
+                addItemMessage.classList.add('hidden');
+                setTimeout(() => addItemError.classList.add('hidden'), 2000);
+            }
+        }
+
+        fetchOrders();
+        setInterval(fetchOrders, 30000); // Refresh every 30 seconds
+    </script>
+</body>
+</html>
