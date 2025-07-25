@@ -3,81 +3,276 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bhojan Valley - Admin Login</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #4a5568, #2d3748);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .login-card {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 12px;
-            padding: 2rem;
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
-            width: 100%;
-            max-width: 400px;
-        }
-    </style>
-</head>
-<body>
-    <div class="login-card">
-        <h2 class="text-3xl font-bold text-gray-800 text-center mb-6">Admin Login</h2>
-        <form id="loginForm" class="space-y-6">
-            <div>
-                <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
-                <input type="text" id="username" name="username" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" required>
-            </div>
-            <div>
-                <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-                <input type="password" id="password" name="password" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500" required>
-            </div>
-            <div id="errorMessage" class="text-red-500 text-sm hidden">Invalid username or password</div>
-            <button type="submit" class="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition duration-200">Login</button>
-        </form>
-    </div>
+    <title>Admin Login</title>
+    <link href="./dist/output.css" rel="stylesheet">
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const loginForm = document.getElementById('loginForm');
-            if (!loginForm) {
-                console.error('Login form not found');
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDEO4lgBPbqm2au8jn42ZK-qQVehtcPNmg",
+            authDomain: "bhojanvalley-ce400.firebaseapp.com",
+            databaseURL: "https://bhojanvalley-ce400-default-rtdb.firebaseio.com",
+            projectId: "bhojanvalley-ce400",
+            storageBucket: "bhojanvalley-ce400.firebasestorage.app",
+            messagingSenderId: "834947885728",
+            appId: "1:834947885728:web:5b1f562dd0bc04f1cab7c5",
+            measurementId: "G-4PTSESNV53"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // Toggle between forms
+        function showForm(formId) {
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('signupForm').classList.add('hidden');
+            document.getElementById('resetForm').classList.add('hidden');
+            document.getElementById(formId).classList.remove('hidden');
+            document.getElementById('errorMessage').classList.add('hidden');
+            document.getElementById('successMessage').classList.add('hidden');
+        }
+
+        // Validate email format
+        function isValidEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        // Validate password strength
+        function isValidPassword(password) {
+            return password.length >= 6; // Firebase requires at least 6 characters
+        }
+
+        // Handle login
+        function handleLogin(event) {
+            event.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const errorMessage = document.getElementById('errorMessage');
+            const loginButton = document.getElementById('loginButton');
+
+            if (!isValidEmail(email)) {
+                errorMessage.textContent = 'Invalid email format.';
+                errorMessage.classList.remove('hidden');
                 return;
             }
 
-            loginForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                console.log('Form submitted');
-                const username = document.getElementById('username').value;
-                const password = document.getElementById('password').value;
-                const errorMessage = document.getElementById('errorMessage');
+            loginButton.disabled = true;
+            loginButton.textContent = 'Logging in...';
 
-                console.log('Username:', username, 'Password:', password);
-                if (username === 'admin' && password === 'admin123') {
-                    console.log('Login successful, attempting redirect to dashboard.html');
-                    fetch('dashboard.html')
-                        .then(response => {
-                            if (response.ok) {
-                                window.location.href = 'dashboard.html';
-                            } else {
-                                console.error('dashboard.html not found');
-                                alert('Dashboard page not found. Check file structure.');
-                            }
-                        })
-                        .catch(err => {
-                            console.error('Error checking dashboard.html:', err);
-                            alert('Error loading dashboard. Use a local server.');
-                        });
-                } else {
+            signInWithEmailAndPassword(auth, email, password)
+                .then(() => {
+                    window.location.href = 'dashboard.html';
+                })
+                .catch((error) => {
+                    let errorText = 'An error occurred. Please try again.';
+                    switch (error.code) {
+                        case 'auth/invalid-email':
+                            errorText = 'Invalid email format.';
+                            break;
+                        case 'auth/user-not-found':
+                            errorText = 'No user found with this email.';
+                            break;
+                        case 'auth/wrong-password':
+                            errorText = 'Incorrect password.';
+                            break;
+                        case 'auth/invalid-credential':
+                            errorText = 'Invalid email or password.';
+                            break;
+                        case 'auth/too-many-requests':
+                            errorText = 'Too many attempts. Try again later.';
+                            break;
+                        default:
+                            errorText = `Error: ${error.message}`;
+                    }
+                    errorMessage.textContent = errorText;
                     errorMessage.classList.remove('hidden');
-                    console.log('Login failed');
-                }
-            });
+                })
+                .finally(() => {
+                    loginButton.disabled = false;
+                    loginButton.textContent = 'Login';
+                });
+        }
+
+        // Handle signup
+        function handleSignup(event) {
+            event.preventDefault();
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const errorMessage = document.getElementById('errorMessage');
+            const successMessage = document.getElementById('successMessage');
+            const signupButton = document.getElementById('signupButton');
+
+            if (!isValidEmail(email)) {
+                errorMessage.textContent = 'Invalid email format.';
+                errorMessage.classList.remove('hidden');
+                return;
+            }
+            if (!isValidPassword(password)) {
+                errorMessage.textContent = 'Password must be at least 6 characters.';
+                errorMessage.classList.remove('hidden');
+                return;
+            }
+            if (password !== confirmPassword) {
+                errorMessage.textContent = 'Passwords do not match.';
+                errorMessage.classList.remove('hidden');
+                return;
+            }
+
+            signupButton.disabled = true;
+            signupButton.textContent = 'Signing up...';
+
+            createUserWithEmailAndPassword(auth, email, password)
+                .then(() => {
+                    successMessage.textContent = 'Account created! You can now log in.';
+                    successMessage.classList.remove('hidden');
+                    errorMessage.classList.add('hidden');
+                    document.getElementById('signupForm').reset();
+                    showForm('loginForm');
+                })
+                .catch((error) => {
+                    let errorText = 'An error occurred. Please try again.';
+                    switch (error.code) {
+                        case 'auth/email-already-in-use':
+                            errorText = 'This email is already registered.';
+                            break;
+                        case 'auth/invalid-email':
+                            errorText = 'Invalid email format.';
+                            break;
+                        case 'auth/weak-password':
+                            errorText = 'Password is too weak.';
+                            break;
+                        default:
+                            errorText = `Error: ${error.message}`;
+                    }
+                    errorMessage.textContent = errorText;
+                    errorMessage.classList.remove('hidden');
+                })
+                .finally(() => {
+                    signupButton.disabled = false;
+                    signupButton.textContent = 'Sign Up';
+                });
+        }
+
+        // Handle password reset
+        function handleReset(event) {
+            event.preventDefault();
+            const email = document.getElementById('resetEmail').value;
+            const errorMessage = document.getElementById('errorMessage');
+            const successMessage = document.getElementById('successMessage');
+            const resetButton = document.getElementById('resetButton');
+
+            if (!isValidEmail(email)) {
+                errorMessage.textContent = 'Invalid email format.';
+                errorMessage.classList.remove('hidden');
+                return;
+            }
+
+            resetButton.disabled = true;
+            resetButton.textContent = 'Sending...';
+
+            sendPasswordResetEmail(auth, email)
+                .then(() => {
+                    successMessage.textContent = 'Password reset email sent! Check your inbox.';
+                    successMessage.classList.remove('hidden');
+                    errorMessage.classList.add('hidden');
+                    document.getElementById('resetForm').reset();
+                    showForm('loginForm');
+                })
+                .catch((error) => {
+                    let errorText = 'An error occurred. Please try again.';
+                    switch (error.code) {
+                        case 'auth/invalid-email':
+                            errorText = 'Invalid email format.';
+                            break;
+                        case 'auth/user-not-found':
+                            errorText = 'No user found with this email.';
+                            break;
+                        default:
+                            errorText = `Error: ${error.message}`;
+                    }
+                    errorMessage.textContent = errorText;
+                    errorMessage.classList.remove('hidden');
+                })
+                .finally(() => {
+                    resetButton.disabled = false;
+                    resetButton.textContent = 'Reset Password';
+                });
+        }
+
+        // Initialize event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('showLogin').addEventListener('click', () => showForm('loginForm'));
+            document.getElementById('showSignup').addEventListener('click', () => showForm('signupForm'));
+            document.getElementById('showReset').addEventListener('click', () => showForm('resetForm'));
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+            document.getElementById('signupForm').addEventListener('submit', handleSignup);
+            document.getElementById('resetForm').addEventListener('submit', handleReset);
         });
     </script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+    <div class="bg-white p-6 rounded shadow-md w-full max-w-sm">
+        <h1 class="text-2xl font-bold mb-4 text-center">Admin Login</h1>
+
+        <!-- Login Form -->
+        <div id="loginForm" class="space-y-4">
+            <div>
+                <label for="loginEmail" class="block text-sm font-medium">Email</label>
+                <input id="loginEmail" type="email" placeholder="admin@example.com" class="w-full border p-2 rounded" required>
+            </div>
+            <div>
+                <label for="loginPassword" class="block text-sm font-medium">Password</label>
+                <input id="loginPassword" type="password" placeholder="Password" class="w-full border p-2 rounded" required>
+            </div>
+            <p id="errorMessage" class="text-red-500 text-sm hidden">Invalid email or password</p>
+            <p id="successMessage" class="text-green-500 text-sm hidden"></p>
+            <button id="loginButton" type="submit" onclick="document.getElementById('loginForm').dispatchEvent(new Event('submit'))" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Login</button>
+            <div class="text-sm text-center space-x-2">
+                <a id="showSignup" href="#" class="text-blue-500 hover:underline">Create an account</a>
+                <span>|</span>
+                <a id="showReset" href="#" class="text-blue-500 hover:underline">Forgot password?</a>
+            </div>
+        </div>
+
+        <!-- Signup Form -->
+        <div id="signupForm" class="space-y-4 hidden">
+            <div>
+                <label for="signupEmail" class="block text-sm font-medium">Email</label>
+                <input id="signupEmail" type="email" placeholder="admin@example.com" class="w-full border p-2 rounded" required>
+            </div>
+            <div>
+                <label for="signupPassword" class="block text-sm font-medium">Password</label>
+                <input id="signupPassword" type="password" placeholder="Password (min 6 characters)" class="w-full border p-2 rounded" required>
+            </div>
+            <div>
+                <label for="confirmPassword" class="block text-sm font-medium">Confirm Password</label>
+                <input id="confirmPassword" type="password" placeholder="Confirm Password" class="w-full border p-2 rounded" required>
+            </div>
+            <p id="errorMessage" class="text-red-500 text-sm hidden">Invalid email or password</p>
+            <p id="successMessage" class="text-green-500 text-sm hidden"></p>
+            <button id="signupButton" type="submit" onclick="document.getElementById('signupForm').dispatchEvent(new Event('submit'))" class="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600">Sign Up</button>
+            <div class="text-sm text-center">
+                <a id="showLogin" href="#" class="text-blue-500 hover:underline">Back to Login</a>
+            </div>
+        </div>
+
+        <!-- Password Reset Form -->
+        <div id="resetForm" class="space-y-4 hidden">
+            <div>
+                <label for="resetEmail" class="block text-sm font-medium">Email</label>
+                <input id="resetEmail" type="email" placeholder="admin@example.com" class="w-full border p-2 rounded" required>
+            </div>
+            <p id="errorMessage" class="text-red-500 text-sm hidden">Invalid email or password</p>
+            <p id="successMessage" class="text-green-500 text-sm hidden"></p>
+            <button id="resetButton" type="submit" onclick="document.getElementById('resetForm').dispatchEvent(new Event('submit'))" class="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Reset Password</button>
+            <div class="text-sm text-center">
+                <a id="showLogin" href="#" class="text-blue-500 hover:underline">Back to Login</a>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
