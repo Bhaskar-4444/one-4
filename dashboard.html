@@ -227,5 +227,53 @@
         fetchOrders();
         setInterval(fetchOrders, 30000); // Refresh every 30 seconds
     </script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDEO4lgBPbqm2au8jn42ZK-qQVehtcPNmg",
+    authDomain: "bhojanvalley-ce400.firebaseapp.com",
+    databaseURL: "https://bhojanvalley-ce400-default-rtdb.firebaseio.com",
+    projectId: "bhojanvalley-ce400",
+    storageBucket: "bhojanvalley-ce400.firebasestorage.app",
+    messagingSenderId: "834947885728",
+    appId: "1:834947885728:web:5b1f562dd0bc04f1cab7c5",
+    measurementId: "G-4PTSESNV53"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  const ordersContainer = document.getElementById("orders-container");
+
+  const ordersRef = ref(db, 'orders');
+  onValue(ordersRef, (snapshot) => {
+    const data = snapshot.val();
+    ordersContainer.innerHTML = ''; // clear previous content
+
+    if (data) {
+      Object.entries(data).forEach(([orderId, order]) => {
+        const orderDiv = document.createElement('div');
+        orderDiv.classList.add("order-box");
+        orderDiv.innerHTML = `
+          <h3>Order ID: ${orderId}</h3>
+          <p><strong>Timestamp:</strong> ${order.timestamp || 'N/A'}</p>
+          <p><strong>Status:</strong> ${order.status || 'Pending'}</p>
+          <p><strong>Total:</strong> ₹${order.total || 0}</p>
+          <p><strong>Items:</strong></p>
+          <ul>
+            ${Object.entries(order.items || {}).map(([item, qty]) => `
+              <li>${item}: ${qty}</li>
+            `).join('')}
+          </ul>
+        `;
+        ordersContainer.appendChild(orderDiv);
+      });
+    } else {
+      ordersContainer.innerHTML = '<p>No orders found.</p>';
+    }
+  });
+</script>
 </body>
 </html>
